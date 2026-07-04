@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fuel Gauge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0A1830;
+    --navy-panel:#102847;
+    --navy-panel-2:#132E52;
+    --amber:#FFB627;
+    --amber-dim:#B37E1C;
+    --off-white:#F2EFE6;
+    --grey:#7C8CA8;
+    --green:#3FB68B;
+    --red:#E4572E;
+    --blue:#4E8FD9;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--navy-deep);
+    color:var(--off-white);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow:hidden;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #app{
+    position:relative;
+    height:100dvh;
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,182,39,0.08), transparent 55%),
+      var(--navy-deep);
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:14px 16px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid rgba(255,182,39,0.15);
+    flex-shrink:0;
+  }
+  .brand{ display:flex; flex-direction:column; line-height:1; }
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.18em;
+    color:var(--amber-dim); margin-bottom:4px;
+  }
+  .brand .title{ font-weight:800; font-size:19px; letter-spacing:-0.01em; }
+  .board{ display:flex; gap:8px; }
+  .board .cell{ text-align:center; }
+  .board .label{
+    font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em;
+    color:var(--grey); margin-bottom:3px;
+  }
+  .flap{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:20px;
+    background:#04101F; color:var(--amber);
+    border:1px solid rgba(255,182,39,0.25);
+    border-radius:4px; padding:4px 8px; min-width:36px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.4);
+  }
+  .flap.pulse{ animation:flapPulse 260ms ease; }
+  @keyframes flapPulse{
+    0%{ transform:scaleY(0.4); opacity:0.3; }
+    100%{ transform:scaleY(1); opacity:1; }
+  }
+
+  /* ---------- STRIKES ---------- */
+  .strikes{ display:flex; gap:6px; padding:8px 16px; flex-shrink:0; }
+  .strike-tag{
+    width:26px; height:16px; border-radius:3px;
+    background:rgba(228,87,46,0.15); border:1px solid rgba(228,87,46,0.35);
+    position:relative;
+  }
+  .strike-tag::before{
+    content:''; position:absolute; left:-4px; top:50%;
+    width:5px; height:5px; border-radius:50%;
+    background:inherit; border:inherit; transform:translateY(-50%);
+  }
+  .strike-tag.lost{ background:var(--red); border-color:var(--red); }
+
+  /* ---------- APRON GRID ---------- */
+  .apron{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap:10px;
+    padding:6px 16px 10px;
+    min-height:0;
+  }
+  .bay{
+    border-radius:14px;
+    background:var(--navy-panel);
+    border:1.5px solid rgba(255,182,39,0.15);
+    display:none;
+    flex-direction:column;
+    padding:8px 10px 10px;
+    min-height:0;
+    gap:6px;
+    position:relative;
+    overflow:hidden;
+  }
+  .bay.active{ display:flex; }
+  .bay-slot-0{ grid-column:1; grid-row:2; }
+  .bay-slot-1{ grid-column:2; grid-row:2; }
+  .bay-slot-2{ grid-column:1; grid-row:1; }
+  .bay-slot-3{ grid-column:2; grid-row:1; }
+
+  .bay-header{
+    display:flex; justify-content:space-between; align-items:baseline;
+    flex-shrink:0;
+  }
+  .bay-header .callsign{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:13px; color:var(--off-white);
+  }
+  .bay-header .city{
+    font-size:9px; letter-spacing:0.06em; color:var(--grey); text-transform:uppercase;
+  }
+
+  .timer-bar{
+    height:5px; border-radius:3px; background:rgba(124,140,168,0.18);
+    overflow:hidden; flex-shrink:0;
+  }
+  .timer-fill{
+    height:100%; width:100%;
+    background:var(--amber);
+    transition:width 60ms linear, background 200ms ease;
+  }
+  .timer-fill.urgent{ background:var(--red); }
+
+  .gauge-row{
+    flex:1;
+    display:flex;
+    align-items:stretch;
+    gap:8px;
+    min-height:0;
+  }
+  .gauge-readout{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-start;
+    gap:1px;
+  }
+  .gauge-readout .num{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:18px; color:var(--off-white);
+    transition:color 120ms ease;
+  }
+  .gauge-readout .unit{
+    font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--grey); letter-spacing:0.08em;
+  }
+  .gauge-readout.in-band .num{ color:var(--green); }
+
+  .gauge-tube{
+    position:relative;
+    width:26px;
+    border-radius:5px;
+    background:#04101F;
+    border:1px solid rgba(255,182,39,0.2);
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .gauge-tube .band{
+    position:absolute; left:0; right:0;
+    background:rgba(63,182,139,0.28);
+    border-top:2px solid var(--green);
+    border-bottom:2px solid var(--green);
+  }
+  .gauge-tube .fuel-fill{
+    position:absolute; left:0; right:0; bottom:0;
+    background:linear-gradient(180deg, #6FB2F2, var(--blue));
+    transition:height 30ms linear;
+  }
+  .gauge-tube .fuel-fill.in-band{ background:linear-gradient(180deg, #6FE0BC, var(--green)); }
+  .gauge-tube .fuel-fill.warn{ background:linear-gradient(180deg, #FF8A5C, var(--red)); }
+
+  .pump-btn{
+    flex-shrink:0;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px; letter-spacing:0.08em;
+    padding:10px 6px;
+    border-radius:10px;
+    background:var(--navy-panel-2);
+    border:1.5px solid rgba(78,143,217,0.35);
+    color:var(--blue);
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition:transform 80ms ease, background 80ms ease, border-color 80ms ease;
+  }
+  .pump-btn .icon{ font-size:15px; }
+  .pump-btn.pumping{
+    background:rgba(78,143,217,0.28);
+    border-color:var(--blue);
+    transform:scale(0.97);
+  }
+
+  .bay.flash-good{ animation:flashGood 420ms ease; }
+  .bay.flash-bad{ animation:flashBad 420ms ease; }
+  @keyframes flashGood{
+    0%{ background:rgba(63,182,139,0.35); }
+    100%{ background:var(--navy-panel); }
+  }
+  @keyframes flashBad{
+    0%{ background:rgba(228,87,46,0.35); }
+    100%{ background:var(--navy-panel); }
+  }
+  .bay-banner{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(4,16,31,0.88);
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:11px;
+    letter-spacing:0.06em; text-align:center; padding:10px;
+    z-index:5; opacity:0; pointer-events:none;
+    transition:opacity 160ms ease;
+  }
+  .bay-banner.show{ opacity:1; }
+  .bay-banner.good{ color:var(--green); }
+  .bay-banner.bad{ color:var(--red); }
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:rgba(6,14,28,0.94);
+    backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; padding:32px; text-align:center; z-index:10;
+  }
+  .overlay.hidden{ display:none; }
+  .overlay .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.2em;
+    color:var(--amber); margin-bottom:10px;
+  }
+  .overlay .eyebrow.fail{ color:var(--red); }
+  .overlay h1{ font-size:26px; font-weight:800; margin:0 0 8px; letter-spacing:-0.01em; }
+  .overlay p{ color:var(--grey); font-size:14px; line-height:1.5; max-width:300px; margin:0 0 22px; }
+  .overlay .stat-row{ display:flex; gap:24px; margin-bottom:22px; }
+  .overlay .stat{ display:flex; flex-direction:column; align-items:center; }
+  .overlay .stat .num{
+    font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:700; color:var(--amber);
+  }
+  .overlay .stat .lbl{ font-size:10px; letter-spacing:0.1em; color:var(--grey); text-transform:uppercase; margin-top:2px; }
+  .overlay .new-best{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green);
+    letter-spacing:0.08em; margin:-12px 0 18px;
+  }
+  .btn-primary{
+    font-family:'Inter',sans-serif; font-weight:700; font-size:15px;
+    background:var(--amber); color:#1A1200; border:none;
+    padding:15px 34px; border-radius:10px; transition:transform 90ms ease;
+  }
+  .btn-primary:active{ transform:scale(0.96); }
+  .history{ margin-top:22px; display:flex; gap:6px; }
+  .history .pip{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--grey);
+    background:var(--navy-panel); border:1px solid rgba(255,182,39,0.15);
+    border-radius:5px; padding:4px 7px;
+  }
+  .credit{
+    position:absolute;
+    bottom:10px; left:0; right:0;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    color:var(--grey);
+    opacity:0.6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="eyebrow">REFUELING APRON</div>
+      <div class="title">Fuel Gauge</div>
+    </div>
+    <div class="board">
+      <div class="cell">
+        <div class="label">FUELED</div>
+        <div class="flap" id="scoreFlap">000</div>
+      </div>
+      <div class="cell">
+        <div class="label">BEST</div>
+        <div class="flap" id="bestFlap">000</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="strikes" id="strikes"></div>
+
+  <div class="apron" id="apron">
+    <!-- 4 fixed bay slots; slot 0 & 1 (bottom row) activate first for thumb reach -->
+    <div class="bay bay-slot-0" data-slot="0">
+      <div class="bay-banner" id="banner-0"></div>
+      <div class="bay-header"><span class="callsign" id="callsign-0">—</span><span class="city" id="city-0">—</span></div>
+      <div class="timer-bar"><div class="timer-fill" id="timerFill-0"></div></div>
+      <div class="gauge-row">
+        <div class="gauge-readout" id="readout-0">
+          <span class="num" id="fuelNum-0">0</span>
+          <span class="unit">KG LOAD</span>
+        </div>
+        <div class="gauge-tube">
+          <div class="band" id="band-0"></div>
+          <div class="fuel-fill" id="fuelFill-0" style="height:0%"></div>
+        </div>
+      </div>
+      <button class="pump-btn" id="pump-0"><span class="icon">⛽</span>HOLD TO PUMP</button>
+    </div>
+
+    <div class="bay bay-slot-1" data-slot="1">
+      <div class="bay-banner" id="banner-1"></div>
+      <div class="bay-header"><span class="callsign" id="callsign-1">—</span><span class="city" id="city-1">—</span></div>
+      <div class="timer-bar"><div class="timer-fill" id="timerFill-1"></div></div>
+      <div class="gauge-row">
+        <div class="gauge-readout" id="readout-1">
+          <span class="num" id="fuelNum-1">0</span>
+          <span class="unit">KG LOAD</span>
+        </div>
+        <div class="gauge-tube">
+          <div class="band" id="band-1"></div>
+          <div class="fuel-fill" id="fuelFill-1" style="height:0%"></div>
+        </div>
+      </div>
+      <button class="pump-btn" id="pump-1"><span class="icon">⛽</span>HOLD TO PUMP</button>
+    </div>
+
+    <div class="bay bay-slot-2" data-slot="2">
+      <div class="bay-banner" id="banner-2"></div>
+      <div class="bay-header"><span class="callsign" id="callsign-2">—</span><span class="city" id="city-2">—</span></div>
+      <div class="timer-bar"><div class="timer-fill" id="timerFill-2"></div></div>
+      <div class="gauge-row">
+        <div class="gauge-readout" id="readout-2">
+          <span class="num" id="fuelNum-2">0</span>
+          <span class="unit">KG LOAD</span>
+        </div>
+        <div class="gauge-tube">
+          <div class="band" id="band-2"></div>
+          <div class="fuel-fill" id="fuelFill-2" style="height:0%"></div>
+        </div>
+      </div>
+      <button class="pump-btn" id="pump-2"><span class="icon">⛽</span>HOLD TO PUMP</button>
+    </div>
+
+    <div class="bay bay-slot-3" data-slot="3">
+      <div class="bay-banner" id="banner-3"></div>
+      <div class="bay-header"><span class="callsign" id="callsign-3">—</span><span class="city" id="city-3">—</span></div>
+      <div class="timer-bar"><div class="timer-fill" id="timerFill-3"></div></div>
+      <div class="gauge-row">
+        <div class="gauge-readout" id="readout-3">
+          <span class="num" id="fuelNum-3">0</span>
+          <span class="unit">KG LOAD</span>
+        </div>
+        <div class="gauge-tube">
+          <div class="band" id="band-3"></div>
+          <div class="fuel-fill" id="fuelFill-3" style="height:0%"></div>
+        </div>
+      </div>
+      <button class="pump-btn" id="pump-3"><span class="icon">⛽</span>HOLD TO PUMP</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="eyebrow">GROUND OPERATIONS</div>
+    <h1>Fuel Gauge</h1>
+    <p>Hold PUMP to load fuel, and release while the gauge sits in the green band to dispatch that aircraft. Keep holding past the band and you'll spill the load — an instant reject. Run out of time and the flight is delayed. More bays open as you keep up.</p>
+    <button class="btn-primary" id="startBtn">Start Shift</button>
+    <div class="history" id="historyRow"></div>
+  </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="eyebrow fail" id="endEyebrow">APRON CLOSED</div>
+    <h1 id="endTitle">Ground Stop</h1>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="num" id="endScore">0</div>
+        <div class="lbl">Fueled</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="endBest">0</div>
+        <div class="lbl">Best</div>
+      </div>
+    </div>
+    <div class="new-best hidden" id="newBestMsg">★ NEW BEST SCORE</div>
+    <button class="btn-primary" id="retryBtn">Next Shift</button>
+  </div>
+
+  <div class="credit">Created by Kevin Choy</div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_BEST = 'fuelGauge_highScore';
+  const STORAGE_HISTORY = 'fuelGauge_history';
+  const AIRLINE_CODES = ['SQ','CX','JL','NH','QF','EK','BA','LH','AF','KE','TG','MH','GA','VN','PR','OZ','CI','BR','TR','JQ','AK','QR','EY','KL'];
+  const CITIES = ['Singapore','Hong Kong','Tokyo','Osaka','Seoul','Sydney','Dubai','London','Frankfurt','Paris','Manila','Bangkok','Kuala Lumpur','Denpasar','Ho Chi Minh City','Taipei','Shanghai','Doha'];
+
+  const CAPACITY = 32000; // kg, top of gauge tube
+
+  const scoreFlap = document.getElementById('scoreFlap');
+  const bestFlap = document.getElementById('bestFlap');
+  const strikesEl = document.getElementById('strikes');
+  const startOverlay = document.getElementById('startOverlay');
+  const endOverlay = document.getElementById('endOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const endScoreEl = document.getElementById('endScore');
+  const endBestEl = document.getElementById('endBest');
+  const endTitleEl = document.getElementById('endTitle');
+  const newBestMsg = document.getElementById('newBestMsg');
+  const historyRow = document.getElementById('historyRow');
+
+  let score = 0;
+  let strikes = 0;
+  let best = parseInt(localStorage.getItem(STORAGE_BEST) || '0', 10);
+  let roundActive = false;
+  let lastTs = null;
+  let rafId = null;
+
+  const bays = [0,1,2,3].map(i=>({
+    slot:i,
+    active:false,
+    resolved:false,
+    pumping:false,
+    fuel:0,
+    bandBottom:0,
+    bandTop:0,
+    durationMs:0,
+    timeRemaining:0,
+    el: document.querySelector('.bay-slot-'+i),
+    els:{
+      callsign: document.getElementById('callsign-'+i),
+      city: document.getElementById('city-'+i),
+      timerFill: document.getElementById('timerFill-'+i),
+      fuelNum: document.getElementById('fuelNum-'+i),
+      readout: document.getElementById('readout-'+i),
+      band: document.getElementById('band-'+i),
+      fuelFill: document.getElementById('fuelFill-'+i),
+      pumpBtn: document.getElementById('pump-'+i),
+      banner: document.getElementById('banner-'+i),
+    }
+  }));
+
+  function pad3(n){ return String(n).padStart(3,'0'); }
+  function pulseFlap(el){ el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+
+  function renderScoreBoard(){
+    scoreFlap.textContent = pad3(score);
+    bestFlap.textContent = pad3(best);
+  }
+  function renderStrikes(){
+    strikesEl.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const d = document.createElement('div');
+      d.className = 'strike-tag' + (i < strikes ? ' lost' : '');
+      strikesEl.appendChild(d);
+    }
+  }
+
+  function targetBayCount(){
+    let n = 2;
+    if(score >= 5) n = 3;
+    if(score >= 12) n = 4;
+    return n;
+  }
+
+  function fillRate(){
+    return Math.min(6800, 4200 + score * 90); // kg per second
+  }
+  function bandWidthFor(){
+    return Math.max(1800, 5200 - score * 130);
+  }
+  function durationFor(){
+    return Math.max(4200, 9000 - score * 190);
+  }
+
+  function randCity(){
+    return CITIES[Math.floor(Math.random()*CITIES.length)];
+  }
+  function randCallsign(){
+    const code = AIRLINE_CODES[Math.floor(Math.random()*AIRLINE_CODES.length)];
+    const num = Math.floor(100 + Math.random()*900);
+    return code + num;
+  }
+
+  function resetBay(bay){
+    const width = bandWidthFor();
+    const minBottom = 7000;
+    const maxBottom = CAPACITY - 3000 - width;
+    bay.bandWidth = width;
+    bay.bandBottom = minBottom + Math.random() * Math.max(1000, (maxBottom - minBottom));
+    bay.bandTop = bay.bandBottom + width;
+    bay.durationMs = durationFor();
+    bay.timeRemaining = bay.durationMs;
+    bay.fuel = 0;
+    bay.pumping = false;
+    bay.resolved = false;
+    bay.active = true;
+
+    bay.els.callsign.textContent = randCallsign();
+    bay.els.city.textContent = randCity();
+    bay.els.band.style.bottom = (bay.bandBottom / CAPACITY * 100) + '%';
+    bay.els.band.style.height = (width / CAPACITY * 100) + '%';
+    bay.els.pumpBtn.classList.remove('pumping');
+    bay.els.banner.classList.remove('show','good','bad');
+    bay.el.classList.add('active');
+    renderBay(bay);
+  }
+
+  function ensureBayCount(){
+    const target = targetBayCount();
+    for(let i=0;i<target;i++){
+      if(!bays[i].active) resetBay(bays[i]);
+    }
+  }
+
+  function renderBay(bay){
+    const pct = Math.min(100, (bay.fuel / CAPACITY) * 100);
+    bay.els.fuelFill.style.height = pct + '%';
+    bay.els.fuelNum.textContent = Math.round(bay.fuel).toLocaleString();
+
+    const inBand = bay.fuel >= bay.bandBottom && bay.fuel <= bay.bandTop;
+    bay.els.readout.classList.toggle('in-band', inBand);
+    bay.els.fuelFill.classList.toggle('in-band', inBand);
+    bay.els.fuelFill.classList.toggle('warn', bay.fuel > bay.bandTop);
+
+    const timePct = Math.max(0, (bay.timeRemaining / bay.durationMs) * 100);
+    bay.els.timerFill.style.width = timePct + '%';
+    bay.els.timerFill.classList.toggle('urgent', timePct < 25);
+  }
+
+  function showBanner(bay, text, kind){
+    bay.els.banner.textContent = text;
+    bay.els.banner.classList.remove('good','bad');
+    bay.els.banner.classList.add(kind, 'show');
+  }
+  function hideBanner(bay){
+    bay.els.banner.classList.remove('show');
+  }
+
+  function successBay(bay){
+    if(bay.resolved) return;
+    bay.resolved = true;
+    bay.active = false;
+    bay.pumping = false;
+    score++;
+    pulseFlap(scoreFlap);
+    renderScoreBoard();
+    bay.el.classList.add('flash-good');
+    showBanner(bay, 'DISPATCHED ✓', 'good');
+    setTimeout(()=>{
+      bay.el.classList.remove('flash-good');
+      bay.el.classList.remove('active');
+      hideBanner(bay);
+      ensureBayCount();
+      resetBay(bay);
+    }, 620);
+  }
+
+  function failBay(bay, reason){
+    if(bay.resolved) return;
+    bay.resolved = true;
+    bay.active = false;
+    bay.pumping = false;
+    strikes++;
+    renderStrikes();
+    bay.el.classList.add('flash-bad');
+    showBanner(bay, reason, 'bad');
+
+    if(strikes >= 3){
+      setTimeout(()=> endRound(reason), 500);
+      return;
+    }
+    setTimeout(()=>{
+      bay.el.classList.remove('flash-bad');
+      bay.el.classList.remove('active');
+      hideBanner(bay);
+      ensureBayCount();
+      resetBay(bay);
+    }, 620);
+  }
+
+  function tick(ts){
+    if(!roundActive) return;
+    if(lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    bays.forEach(bay=>{
+      if(!bay.active || bay.resolved) return;
+
+      bay.timeRemaining -= dt*1000;
+
+      if(bay.pumping){
+        bay.fuel += fillRate() * dt;
+        if(bay.fuel > bay.bandTop){
+          renderBay(bay);
+          failBay(bay, 'OVERFILL — LOAD REJECTED');
+          return;
+        }
+      }
+
+      if(bay.timeRemaining <= 0 && !bay.resolved){
+        renderBay(bay);
+        failBay(bay, 'DEPARTURE DELAYED');
+        return;
+      }
+
+      renderBay(bay);
+    });
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function bindPump(bay){
+    const btn = bay.els.pumpBtn;
+    const start = (e)=>{
+      e.preventDefault();
+      if(!bay.active || bay.resolved) return;
+      bay.pumping = true;
+      btn.classList.add('pumping');
+      try{ btn.setPointerCapture(e.pointerId); }catch(err){}
+    };
+    const stop = (e)=>{
+      if(!bay.pumping) return;
+      bay.pumping = false;
+      btn.classList.remove('pumping');
+      if(!bay.active || bay.resolved) return;
+      const inBand = bay.fuel >= bay.bandBottom && bay.fuel <= bay.bandTop;
+      if(inBand){
+        successBay(bay);
+      }
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('contextmenu', (e)=> e.preventDefault());
+  }
+
+  bays.forEach(bindPump);
+
+  function saveResult(finalScore){
+    if(finalScore > best){
+      best = finalScore;
+      localStorage.setItem(STORAGE_BEST, String(best));
+    }
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    hist.unshift(finalScore);
+    localStorage.setItem(STORAGE_HISTORY, JSON.stringify(hist.slice(0,5)));
+  }
+
+  function renderHistory(){
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    historyRow.innerHTML = '';
+    hist.slice(0,5).forEach(v=>{
+      const pip = document.createElement('div');
+      pip.className = 'pip';
+      pip.textContent = v;
+      historyRow.appendChild(pip);
+    });
+  }
+
+  function endRound(reason){
+    roundActive = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    saveResult(score);
+    endTitleEl.textContent = reason || 'Ground Stop';
+    endScoreEl.textContent = pad3(score);
+    endBestEl.textContent = pad3(best);
+    newBestMsg.classList.toggle('hidden', score < best || score === 0);
+    renderScoreBoard();
+    endOverlay.classList.remove('hidden');
+  }
+
+  function resetAllBays(){
+    bays.forEach(bay=>{
+      bay.active = false;
+      bay.resolved = false;
+      bay.pumping = false;
+      bay.el.classList.remove('active','flash-good','flash-bad');
+      hideBanner(bay);
+    });
+  }
+
+  function startRound(){
+    score = 0;
+    strikes = 0;
+    resetAllBays();
+    renderScoreBoard();
+    renderStrikes();
+    startOverlay.classList.add('hidden');
+    endOverlay.classList.add('hidden');
+    ensureBayCount();
+    roundActive = true;
+    lastTs = null;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  startBtn.addEventListener('click', startRound);
+  retryBtn.addEventListener('click', startRound);
+
+  renderScoreBoard();
+  renderStrikes();
+  renderHistory();
+})();
+</script>
+</body>
+</html>

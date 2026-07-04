@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Runway Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0A1830;
+    --navy-panel:#102847;
+    --navy-panel-2:#132E52;
+    --asphalt-a:#1B1D22;
+    --asphalt-b:#232630;
+    --amber:#FFB627;
+    --amber-dim:#B37E1C;
+    --off-white:#F2EFE6;
+    --grey:#7C8CA8;
+    --green:#3FB68B;
+    --red:#E4572E;
+    --blue:#4E8FD9;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--navy-deep);
+    color:var(--off-white);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow:hidden;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #app{
+    position:relative;
+    height:100dvh;
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,182,39,0.08), transparent 55%),
+      var(--navy-deep);
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:14px 16px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid rgba(255,182,39,0.15);
+    flex-shrink:0;
+  }
+  .brand{ display:flex; flex-direction:column; line-height:1; }
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.18em;
+    color:var(--amber-dim);
+    margin-bottom:4px;
+  }
+  .brand .title{ font-weight:800; font-size:19px; letter-spacing:-0.01em; }
+  .board{ display:flex; gap:8px; }
+  .board .cell{ text-align:center; }
+  .board .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; letter-spacing:0.12em;
+    color:var(--grey); margin-bottom:3px;
+  }
+  .flap{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700; font-size:20px;
+    background:#04101F; color:var(--amber);
+    border:1px solid rgba(255,182,39,0.25);
+    border-radius:4px; padding:4px 8px; min-width:36px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.4);
+  }
+  .flap.pulse{ animation:flapPulse 260ms ease; }
+  @keyframes flapPulse{
+    0%{ transform:scaleY(0.4); opacity:0.3; }
+    100%{ transform:scaleY(1); opacity:1; }
+  }
+
+  /* ---------- RUNWAY REMAINING ---------- */
+  .runway-block{ padding:12px 16px 4px; flex-shrink:0; }
+  .runway-block .label-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:6px;
+  }
+  .runway-block .label-row .lbl{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; letter-spacing:0.14em; color:var(--grey);
+  }
+  .runway-block .label-row .rwy-id{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; color:var(--amber-dim); letter-spacing:0.08em;
+  }
+  .runway-bar{
+    position:relative;
+    height:22px;
+    border-radius:5px;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(90deg, var(--asphalt-a) 0 26px, var(--asphalt-b) 26px 52px);
+    border:1px solid rgba(255,182,39,0.15);
+  }
+  .runway-bar .centerline{
+    position:absolute; top:50%; left:0; right:0; height:2px;
+    transform:translateY(-50%);
+    background:repeating-linear-gradient(90deg, var(--off-white) 0 10px, transparent 10px 20px);
+    opacity:0.35;
+  }
+  .runway-bar .remaining-fill{
+    position:absolute; top:0; right:0; bottom:0;
+    background:linear-gradient(180deg, rgba(228,87,46,0.35), rgba(228,87,46,0.15));
+    border-left:2px solid var(--red);
+    transition:width 60ms linear;
+  }
+
+  /* ---------- SPEED GAUGE ---------- */
+  .gauge-block{ padding:16px 16px 6px; flex-shrink:0; }
+  .gauge-readout{
+    display:flex; align-items:baseline; gap:8px; margin-bottom:10px;
+  }
+  .gauge-readout .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700; font-size:44px; color:var(--off-white);
+    letter-spacing:-0.02em;
+    transition:color 120ms ease;
+  }
+  .gauge-readout .unit{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px; color:var(--grey); letter-spacing:0.1em;
+  }
+  .gauge-readout.in-band .num{ color:var(--green); }
+  .gauge-readout.redline .num{ color:var(--red); }
+
+  .gauge-bar{
+    position:relative;
+    height:34px;
+    border-radius:6px;
+    background:var(--navy-panel);
+    border:1px solid rgba(255,182,39,0.15);
+    overflow:hidden;
+  }
+  .gauge-bar .ticks{
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 10%);
+  }
+  .gauge-bar .band{
+    position:absolute; top:0; bottom:0;
+    background:rgba(63,182,139,0.22);
+    border-left:2px solid var(--green);
+    border-right:2px solid var(--green);
+  }
+  .gauge-bar .band .vr-label{
+    position:absolute; top:-2px; left:2px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; color:var(--green); letter-spacing:0.08em;
+  }
+  .gauge-bar .redzone{
+    position:absolute; top:0; bottom:0; right:0;
+    width:5%;
+    background:repeating-linear-gradient(45deg, rgba(228,87,46,0.5) 0 4px, rgba(228,87,46,0.15) 4px 8px);
+  }
+  .gauge-bar .fill{
+    position:absolute; top:0; bottom:0; left:0;
+    background:linear-gradient(90deg, var(--blue), #6FB2F2);
+    transition:width 40ms linear;
+  }
+  .gauge-bar .fill.in-band{ background:linear-gradient(90deg, var(--green), #6FE0BC); }
+  .gauge-bar .fill.redline{ background:linear-gradient(90deg, var(--red), #FF8A5C); }
+  .gauge-bar .needle{
+    position:absolute; top:-3px; bottom:-3px; width:2px;
+    background:var(--off-white);
+    transition:left 40ms linear;
+  }
+
+  /* ---------- CONTROLS ---------- */
+  .controls{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+    gap:10px;
+    min-height:0;
+  }
+  .throttle-zone{
+    flex:1;
+    border-radius:16px;
+    background:var(--navy-panel);
+    border:1.5px solid rgba(78,143,217,0.3);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    position:relative;
+    overflow:hidden;
+    transition:background 60ms ease;
+  }
+  .throttle-zone .plane-icon{
+    font-size:34px;
+    transform:rotate(-90deg);
+    opacity:0.85;
+  }
+  .throttle-zone .tap-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700; font-size:13px; letter-spacing:0.12em;
+    color:var(--blue);
+  }
+  .throttle-zone .sub-label{
+    font-size:11px; color:var(--grey);
+  }
+  .throttle-zone.tapped{ background:var(--navy-panel-2); }
+  .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(78,143,217,0.35);
+    transform:translate(-50%,-50%) scale(0);
+    pointer-events:none;
+    animation:rippleAnim 420ms ease-out forwards;
+  }
+  @keyframes rippleAnim{
+    to{ transform:translate(-50%,-50%) scale(1); opacity:0; }
+  }
+
+  .rotate-btn{
+    flex-shrink:0;
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700; font-size:17px; letter-spacing:0.1em;
+    padding:18px;
+    border-radius:14px;
+    background:var(--amber);
+    color:#1A1200;
+    border:none;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform 90ms ease;
+  }
+  .rotate-btn:active{ transform:scale(0.96); }
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:rgba(6,14,28,0.94);
+    backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; padding:32px; text-align:center; z-index:10;
+  }
+  .overlay.hidden{ display:none; }
+  .overlay .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:0.2em; color:var(--amber); margin-bottom:10px;
+  }
+  .overlay .eyebrow.fail{ color:var(--red); }
+  .overlay h1{ font-size:26px; font-weight:800; margin:0 0 8px; letter-spacing:-0.01em; }
+  .overlay p{ color:var(--grey); font-size:14px; line-height:1.5; max-width:280px; margin:0 0 22px; }
+  .overlay .stat-row{ display:flex; gap:24px; margin-bottom:22px; }
+  .overlay .stat{ display:flex; flex-direction:column; align-items:center; }
+  .overlay .stat .num{
+    font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:700; color:var(--amber);
+  }
+  .overlay .stat .lbl{ font-size:10px; letter-spacing:0.1em; color:var(--grey); text-transform:uppercase; margin-top:2px; }
+  .overlay .new-best{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green);
+    letter-spacing:0.08em; margin:-12px 0 18px;
+  }
+  .btn-primary{
+    font-family:'Inter',sans-serif; font-weight:700; font-size:15px;
+    background:var(--amber); color:#1A1200; border:none;
+    padding:15px 34px; border-radius:10px; transition:transform 90ms ease;
+  }
+  .btn-primary:active{ transform:scale(0.96); }
+  .history{ margin-top:22px; display:flex; gap:6px; }
+  .history .pip{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--grey);
+    background:var(--navy-panel); border:1px solid rgba(255,182,39,0.15);
+    border-radius:5px; padding:4px 7px;
+  }
+  .credit{
+    position:absolute;
+    bottom:10px; left:0; right:0;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    color:var(--grey);
+    opacity:0.6;
+  }
+
+  .liftoff-banner{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    z-index:9; pointer-events:none;
+  }
+  .liftoff-banner.hidden{ display:none; }
+  .liftoff-banner span{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700; font-size:22px; letter-spacing:0.1em;
+    color:var(--green);
+    background:rgba(6,14,28,0.85);
+    padding:10px 22px;
+    border-radius:10px;
+    border:1px solid rgba(63,182,139,0.4);
+    animation:liftoffPop 620ms ease forwards;
+  }
+  @keyframes liftoffPop{
+    0%{ transform:scale(0.7); opacity:0; }
+    30%{ transform:scale(1.05); opacity:1; }
+    75%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(1); opacity:0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="eyebrow">DEPARTURE OPS</div>
+      <div class="title">Runway Rush</div>
+    </div>
+    <div class="board">
+      <div class="cell">
+        <div class="label">SCORE</div>
+        <div class="flap" id="scoreFlap">000</div>
+      </div>
+      <div class="cell">
+        <div class="label">BEST</div>
+        <div class="flap" id="bestFlap">000</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="runway-block">
+    <div class="label-row">
+      <span class="lbl">RUNWAY REMAINING</span>
+      <span class="rwy-id" id="rwyId">RWY 02L</span>
+    </div>
+    <div class="runway-bar">
+      <div class="centerline"></div>
+      <div class="remaining-fill" id="remainingFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="gauge-block">
+    <div class="gauge-readout" id="gaugeReadout">
+      <span class="num" id="speedNum">0</span>
+      <span class="unit">KT INDICATED</span>
+    </div>
+    <div class="gauge-bar">
+      <div class="ticks"></div>
+      <div class="redzone"></div>
+      <div class="band" id="bandEl"><span class="vr-label">VR</span></div>
+      <div class="fill" id="fillEl" style="width:0%"></div>
+      <div class="needle" id="needleEl" style="left:0%"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="throttle-zone" id="throttleZone">
+      <div class="plane-icon">✈️</div>
+      <div class="tap-label">TAP TO THROTTLE</div>
+      <div class="sub-label">Build speed into the green band</div>
+    </div>
+    <button class="rotate-btn" id="rotateBtn">⬆ ROTATE</button>
+  </div>
+
+  <div class="liftoff-banner hidden" id="liftoffBanner"><span>V-R... LIFTOFF</span></div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="eyebrow">CLEARED FOR TAKEOFF</div>
+    <h1>Runway Rush</h1>
+    <p>Tap to throttle up and build speed into the green VR band, then hit ROTATE before the runway runs out. Overspeed past redline blows a tire. Rotate too early and you'll stall.</p>
+    <button class="btn-primary" id="startBtn">Start Takeoff Roll</button>
+    <div class="history" id="historyRow"></div>
+  </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="eyebrow fail" id="endEyebrow">ABORTED TAKEOFF</div>
+    <h1 id="endTitle">Runway Overrun</h1>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="num" id="endScore">0</div>
+        <div class="lbl">Takeoffs</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="endBest">0</div>
+        <div class="lbl">Best</div>
+      </div>
+    </div>
+    <div class="new-best hidden" id="newBestMsg">★ NEW BEST SCORE</div>
+    <button class="btn-primary" id="retryBtn">Next Departure</button>
+  </div>
+
+  <div class="credit">Created by Kevin Choy</div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_BEST = 'runwayRush_highScore';
+  const STORAGE_HISTORY = 'runwayRush_history';
+  const RWY_IDS = ['02L','20R','09','27','14L','32R','05','23'];
+
+  const SPEED_MAX = 200;        // redline (tire speed limit, kt)
+  const DECAY_RATE = 42;        // units per second
+  const TAP_ADD_MIN = 13;
+  const TAP_ADD_MAX = 19;
+  const VR_MIN = 140;           // VR band never starts below this
+
+  const scoreFlap = document.getElementById('scoreFlap');
+  const bestFlap = document.getElementById('bestFlap');
+  const remainingFill = document.getElementById('remainingFill');
+  const speedNum = document.getElementById('speedNum');
+  const gaugeReadout = document.getElementById('gaugeReadout');
+  const fillEl = document.getElementById('fillEl');
+  const needleEl = document.getElementById('needleEl');
+  const bandEl = document.getElementById('bandEl');
+  const throttleZone = document.getElementById('throttleZone');
+  const rotateBtn = document.getElementById('rotateBtn');
+  const rwyIdEl = document.getElementById('rwyId');
+  const startOverlay = document.getElementById('startOverlay');
+  const endOverlay = document.getElementById('endOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const endScoreEl = document.getElementById('endScore');
+  const endBestEl = document.getElementById('endBest');
+  const endTitleEl = document.getElementById('endTitle');
+  const newBestMsg = document.getElementById('newBestMsg');
+  const historyRow = document.getElementById('historyRow');
+  const liftoffBanner = document.getElementById('liftoffBanner');
+
+  let score = 0;
+  let best = parseInt(localStorage.getItem(STORAGE_BEST) || '0', 10);
+  let speed = 0;
+  let durationMs = 6000;
+  let timeRemaining = 6000;
+  let bandStart = 60;
+  let bandWidth = 20;
+  let roundActive = false;
+  let lastTs = null;
+  let rafId = null;
+
+  function pad3(n){ return String(n).padStart(3,'0'); }
+  function pulseFlap(el){ el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+
+  function renderScoreBoard(){
+    scoreFlap.textContent = pad3(score);
+    bestFlap.textContent = pad3(best);
+  }
+
+  function setupRound(){
+    const roundIdx = score; // 0-based difficulty progression
+    durationMs = Math.max(2200, 6000 - roundIdx * 220);
+    bandWidth = Math.max(18, 40 - roundIdx * 2);
+    const minStart = Math.min(VR_MIN + 20, VR_MIN + roundIdx * 1.5);
+    const maxStart = Math.max(minStart + 8, (SPEED_MAX - 8) - bandWidth);
+    bandStart = minStart + Math.random() * Math.max(1, (maxStart - minStart));
+    bandStart = Math.min(bandStart, (SPEED_MAX - 2) - bandWidth);
+    timeRemaining = durationMs;
+    speed = 0;
+    rwyIdEl.textContent = 'RWY ' + RWY_IDS[Math.floor(Math.random()*RWY_IDS.length)];
+
+    bandEl.style.left = (bandStart / SPEED_MAX * 100) + '%';
+    bandEl.style.width = (bandWidth / SPEED_MAX * 100) + '%';
+  }
+
+  function render(){
+    remainingFill.style.width = (100 * timeRemaining / durationMs) + '%';
+
+    const clamped = Math.min(speed, SPEED_MAX + 5);
+    const pct = Math.min(100, (clamped / SPEED_MAX) * 100);
+    fillEl.style.width = pct + '%';
+    needleEl.style.left = pct + '%';
+    speedNum.textContent = Math.round(speed);
+
+    const inBand = speed >= bandStart && speed <= bandStart + bandWidth;
+    const redline = speed >= SPEED_MAX;
+    fillEl.classList.toggle('in-band', inBand);
+    fillEl.classList.toggle('redline', redline);
+    gaugeReadout.classList.toggle('in-band', inBand);
+    gaugeReadout.classList.toggle('redline', redline);
+  }
+
+  function tick(ts){
+    if(!roundActive) return;
+    if(lastTs === null) lastTs = ts;
+    const dt = ts - lastTs;
+    lastTs = ts;
+
+    timeRemaining -= dt;
+    speed = Math.max(0, speed - DECAY_RATE * (dt/1000));
+
+    render();
+
+    if(speed >= SPEED_MAX){
+      fail('OVERSPEED — TIRE BLOWOUT', 'Speed exceeded redline before rotation.');
+      return;
+    }
+    if(timeRemaining <= 0){
+      fail('RUNWAY OVERRUN', 'Ran out of runway before reaching VR.');
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function addThrottle(x, y){
+    if(!roundActive) return;
+    speed += TAP_ADD_MIN + Math.random() * (TAP_ADD_MAX - TAP_ADD_MIN);
+    throttleZone.classList.add('tapped');
+    setTimeout(()=>throttleZone.classList.remove('tapped'), 90);
+
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    const rect = throttleZone.getBoundingClientRect();
+    r.style.left = (x - rect.left) + 'px';
+    r.style.top = (y - rect.top) + 'px';
+    r.style.width = r.style.height = '160px';
+    throttleZone.appendChild(r);
+    setTimeout(()=> r.remove(), 440);
+
+    render();
+  }
+
+  function attemptRotate(){
+    if(!roundActive) return;
+    if(speed >= SPEED_MAX){
+      fail('OVERSPEED — TIRE BLOWOUT', 'Speed exceeded redline before rotation.');
+      return;
+    }
+    if(speed < bandStart){
+      fail('STALL', 'Rotated below VR — insufficient speed to climb.');
+      return;
+    }
+    if(speed > bandStart + bandWidth){
+      fail('TAIL STRIKE', 'Rotated too aggressively above the safe VR window.');
+      return;
+    }
+    // success
+    cancelAnimationFrame(rafId);
+    roundActive = false;
+    score++;
+    pulseFlap(scoreFlap);
+    renderScoreBoard();
+    showLiftoff();
+    setTimeout(()=>{
+      setupRound();
+      render();
+      roundActive = true;
+      lastTs = null;
+      rafId = requestAnimationFrame(tick);
+    }, 650);
+  }
+
+  function showLiftoff(){
+    liftoffBanner.classList.remove('hidden');
+    void liftoffBanner.offsetWidth;
+    const span = liftoffBanner.querySelector('span');
+    span.style.animation = 'none';
+    void span.offsetWidth;
+    span.style.animation = '';
+    setTimeout(()=> liftoffBanner.classList.add('hidden'), 650);
+  }
+
+  function fail(title, desc){
+    roundActive = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    saveResult(score);
+    endTitleEl.textContent = title;
+    endScoreEl.textContent = pad3(score);
+    endBestEl.textContent = pad3(best);
+    newBestMsg.classList.toggle('hidden', score < best || score === 0);
+    renderScoreBoard();
+    endOverlay.classList.remove('hidden');
+  }
+
+  function saveResult(finalScore){
+    if(finalScore > best){
+      best = finalScore;
+      localStorage.setItem(STORAGE_BEST, String(best));
+    }
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    hist.unshift(finalScore);
+    localStorage.setItem(STORAGE_HISTORY, JSON.stringify(hist.slice(0,5)));
+  }
+
+  function renderHistory(){
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    historyRow.innerHTML = '';
+    hist.slice(0,5).forEach(v=>{
+      const pip = document.createElement('div');
+      pip.className = 'pip';
+      pip.textContent = v;
+      historyRow.appendChild(pip);
+    });
+  }
+
+  function startRound(){
+    score = 0;
+    renderScoreBoard();
+    startOverlay.classList.add('hidden');
+    endOverlay.classList.add('hidden');
+    setupRound();
+    render();
+    roundActive = true;
+    lastTs = null;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  throttleZone.addEventListener('pointerdown', (e)=>{
+    addThrottle(e.clientX, e.clientY);
+  });
+  rotateBtn.addEventListener('click', attemptRotate);
+  startBtn.addEventListener('click', startRound);
+  retryBtn.addEventListener('click', startRound);
+
+  renderScoreBoard();
+  renderHistory();
+})();
+</script>
+</body>
+</html>

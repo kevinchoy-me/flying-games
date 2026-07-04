@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ATC Tap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0A1830;
+    --navy-panel:#102847;
+    --navy-panel-2:#132E52;
+    --scope-bg:#04120E;
+    --amber:#FFB627;
+    --amber-dim:#B37E1C;
+    --off-white:#F2EFE6;
+    --grey:#7C8CA8;
+    --green:#3FB68B;
+    --green-dim:#1E5B45;
+    --red:#E4572E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--navy-deep);
+    color:var(--off-white);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow:hidden;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #app{
+    position:relative;
+    height:100dvh;
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,182,39,0.08), transparent 55%),
+      var(--navy-deep);
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:14px 16px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid rgba(255,182,39,0.15);
+    flex-shrink:0;
+  }
+  .brand{ display:flex; flex-direction:column; line-height:1; }
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; letter-spacing:0.18em; color:var(--amber-dim); margin-bottom:4px;
+  }
+  .brand .title{ font-weight:800; font-size:19px; letter-spacing:-0.01em; }
+  .board{ display:flex; gap:8px; }
+  .board .cell{ text-align:center; }
+  .board .label{
+    font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em;
+    color:var(--grey); margin-bottom:3px;
+  }
+  .flap{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:20px;
+    background:#04101F; color:var(--amber);
+    border:1px solid rgba(255,182,39,0.25);
+    border-radius:4px; padding:4px 8px; min-width:36px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.4);
+  }
+  .flap.pulse{ animation:flapPulse 260ms ease; }
+  @keyframes flapPulse{
+    0%{ transform:scaleY(0.4); opacity:0.3; }
+    100%{ transform:scaleY(1); opacity:1; }
+  }
+
+  /* ---------- STRIKES ---------- */
+  .strikes{ display:flex; gap:6px; padding:8px 16px; flex-shrink:0; }
+  .strike-tag{
+    width:26px; height:16px; border-radius:3px;
+    background:rgba(228,87,46,0.15); border:1px solid rgba(228,87,46,0.35);
+    position:relative;
+  }
+  .strike-tag::before{
+    content:''; position:absolute; left:-4px; top:50%;
+    width:5px; height:5px; border-radius:50%;
+    background:inherit; border:inherit; transform:translateY(-50%);
+  }
+  .strike-tag.lost{ background:var(--red); border-color:var(--red); }
+
+  /* ---------- CLEARANCE STRIP ---------- */
+  .clearance-strip{
+    padding:2px 16px 10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .clearance-strip .lbl{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.14em; color:var(--grey);
+  }
+  .clearance-strip .next-flap{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:18px;
+    background:#04101F; color:var(--amber);
+    border:1px solid rgba(255,182,39,0.35);
+    border-radius:5px; padding:5px 10px;
+    box-shadow: 0 0 0 2px rgba(255,182,39,0.08);
+  }
+  .clearance-strip .queue-rest{
+    display:flex; gap:6px;
+  }
+  .clearance-strip .queue-rest span{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--grey);
+    background:var(--navy-panel); border:1px solid rgba(124,140,168,0.25);
+    border-radius:4px; padding:3px 7px;
+  }
+
+  /* ---------- RADAR SCOPE ---------- */
+  .radar-wrap{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:4px 16px 10px;
+    min-height:0;
+  }
+  .radar{
+    position:relative;
+    width:100%;
+    max-width:420px;
+    aspect-ratio:1/1;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(63,182,139,0.06), var(--scope-bg) 70%);
+    border:1px solid rgba(63,182,139,0.3);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 0 20px rgba(63,182,139,0.06);
+    overflow:hidden;
+  }
+  .ring{
+    position:absolute;
+    border:1px solid rgba(63,182,139,0.18);
+    border-radius:50%;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+  }
+  .crosshair{
+    position:absolute; background:rgba(63,182,139,0.14);
+  }
+  .crosshair.h{ left:0; right:0; top:50%; height:1px; transform:translateY(-50%); }
+  .crosshair.v{ top:0; bottom:0; left:50%; width:1px; transform:translateX(-50%); }
+  .sweep{
+    position:absolute; inset:0;
+    background:conic-gradient(from 0deg, rgba(255,182,39,0.28), transparent 26%, transparent 100%);
+    animation:sweepSpin 4.2s linear infinite;
+    mix-blend-mode:screen;
+  }
+  @keyframes sweepSpin{ to{ transform:rotate(360deg); } }
+  .protected-zone{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    border-radius:50%;
+    border:1.5px dashed rgba(228,87,46,0.55);
+    background:rgba(228,87,46,0.05);
+  }
+
+  .plane{
+    position:absolute;
+    top:0; left:0;
+    transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center;
+    gap:2px;
+    cursor:pointer;
+    z-index:3;
+  }
+  .plane .glyph{
+    font-size:20px;
+    filter: drop-shadow(0 0 3px rgba(78,143,217,0.6));
+    transition: filter 120ms ease;
+  }
+  .plane .tag{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:10px;
+    color:var(--grey);
+    background:rgba(16,40,71,0.85);
+    border:1px solid rgba(124,140,168,0.3);
+    border-radius:3px; padding:1px 5px;
+    white-space:nowrap;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+  .plane.target .glyph{ filter: drop-shadow(0 0 6px rgba(255,182,39,0.9)); }
+  .plane.target .tag{
+    color:var(--amber); border-color:rgba(255,182,39,0.6);
+    background:rgba(255,182,39,0.12);
+    animation:targetPulse 900ms ease-in-out infinite;
+  }
+  @keyframes targetPulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(255,182,39,0.35); }
+    50%{ box-shadow:0 0 0 5px rgba(255,182,39,0); }
+  }
+  .plane.cleared .glyph, .plane.cleared .tag{ transition:opacity 260ms ease, transform 260ms ease; }
+  .plane.cleared{ opacity:0; transform:translate(-50%,-50%) scale(1.3); }
+  .plane.collided .glyph{ filter: drop-shadow(0 0 8px rgba(228,87,46,1)); }
+  .plane.collided .tag{ color:var(--red); border-color:var(--red); background:rgba(228,87,46,0.18); }
+  .plane.mistap .tag{ animation:mistapShake 260ms ease; }
+  @keyframes mistapShake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-3px); }
+    75%{ transform:translateX(3px); }
+  }
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:rgba(6,14,28,0.94);
+    backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; padding:32px; text-align:center; z-index:10;
+  }
+  .overlay.hidden{ display:none; }
+  .overlay .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.2em;
+    color:var(--amber); margin-bottom:10px;
+  }
+  .overlay .eyebrow.fail{ color:var(--red); }
+  .overlay h1{ font-size:26px; font-weight:800; margin:0 0 8px; letter-spacing:-0.01em; }
+  .overlay p{ color:var(--grey); font-size:14px; line-height:1.5; max-width:290px; margin:0 0 22px; }
+  .overlay .stat-row{ display:flex; gap:24px; margin-bottom:22px; }
+  .overlay .stat{ display:flex; flex-direction:column; align-items:center; }
+  .overlay .stat .num{
+    font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:700; color:var(--amber);
+  }
+  .overlay .stat .lbl{ font-size:10px; letter-spacing:0.1em; color:var(--grey); text-transform:uppercase; margin-top:2px; }
+  .overlay .new-best{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green);
+    letter-spacing:0.08em; margin:-12px 0 18px;
+  }
+  .btn-primary{
+    font-family:'Inter',sans-serif; font-weight:700; font-size:15px;
+    background:var(--amber); color:#1A1200; border:none;
+    padding:15px 34px; border-radius:10px; transition:transform 90ms ease;
+  }
+  .btn-primary:active{ transform:scale(0.96); }
+  .history{ margin-top:22px; display:flex; gap:6px; }
+  .history .pip{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--grey);
+    background:var(--navy-panel); border:1px solid rgba(255,182,39,0.15);
+    border-radius:5px; padding:4px 7px;
+  }
+  .credit{
+    position:absolute;
+    bottom:10px; left:0; right:0;
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    color:var(--grey);
+    opacity:0.6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="eyebrow">APPROACH CONTROL</div>
+      <div class="title">ATC Tap</div>
+    </div>
+    <div class="board">
+      <div class="cell">
+        <div class="label">CLEARED</div>
+        <div class="flap" id="scoreFlap">000</div>
+      </div>
+      <div class="cell">
+        <div class="label">BEST</div>
+        <div class="flap" id="bestFlap">000</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="strikes" id="strikes"></div>
+
+  <div class="clearance-strip">
+    <span class="lbl">CLEAR NEXT</span>
+    <span class="next-flap" id="nextFlap">—</span>
+    <div class="queue-rest" id="queueRest"></div>
+  </div>
+
+  <div class="radar-wrap">
+    <div class="radar" id="radar">
+      <div class="sweep"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="eyebrow">RADAR CONTACT</div>
+    <h1>ATC Tap</h1>
+    <p>Aircraft close in from every direction. Tap the amber-highlighted contact first — it's closest to losing separation. Tap out of order or let one reach the centre and it's a strike. Three strikes and the sector closes.</p>
+    <button class="btn-primary" id="startBtn">Open Sector</button>
+    <div class="history" id="historyRow"></div>
+  </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="eyebrow fail" id="endEyebrow">SECTOR CLOSED</div>
+    <h1 id="endTitle">Loss of Separation</h1>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="num" id="endScore">0</div>
+        <div class="lbl">Cleared</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="endBest">0</div>
+        <div class="lbl">Best</div>
+      </div>
+    </div>
+    <div class="new-best hidden" id="newBestMsg">★ NEW BEST SCORE</div>
+    <button class="btn-primary" id="retryBtn">Reopen Sector</button>
+  </div>
+
+  <div class="credit">Created by Kevin Choy</div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_BEST = 'atcTap_highScore';
+  const STORAGE_HISTORY = 'atcTap_history';
+  const AIRLINE_CODES = ['SQ','CX','JL','NH','QF','EK','BA','LH','AF','KE','TG','MH','GA','VN','PR','OZ','CI','BR','TR','JQ','AK','QR','EY','KL'];
+
+  const RADIUS_START_MIN = 0.86;
+  const RADIUS_START_MAX = 1.0;
+  const RADIUS_MIN = 0.08;      // collision threshold
+  const MAX_RADIUS_PCT = 44;    // % of container half-width used for orbit
+  const BASE_SPEED = 0.075;     // fraction of radius per second
+  const SPEED_PER_SCORE = 0.0032;
+  const SPEED_CAP = 0.20;
+
+  const radar = document.getElementById('radar');
+  const scoreFlap = document.getElementById('scoreFlap');
+  const bestFlap = document.getElementById('bestFlap');
+  const strikesEl = document.getElementById('strikes');
+  const nextFlap = document.getElementById('nextFlap');
+  const queueRest = document.getElementById('queueRest');
+  const startOverlay = document.getElementById('startOverlay');
+  const endOverlay = document.getElementById('endOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const endScoreEl = document.getElementById('endScore');
+  const endBestEl = document.getElementById('endBest');
+  const endTitleEl = document.getElementById('endTitle');
+  const newBestMsg = document.getElementById('newBestMsg');
+  const historyRow = document.getElementById('historyRow');
+
+  let score = 0;
+  let strikes = 0;
+  let best = parseInt(localStorage.getItem(STORAGE_BEST) || '0', 10);
+  let planes = [];
+  let planeSeq = 0;
+  let roundActive = false;
+  let lastTs = null;
+  let rafId = null;
+
+  let audioCtx = null;
+  function unlockAudio(){
+    if(!audioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(Ctx) audioCtx = new Ctx();
+    } else if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }
+  function playBlip(kind){
+    if(!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if(kind === 'hit'){
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.16);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+  }
+
+  function pad3(n){ return String(n).padStart(3,'0'); }
+  function pulseFlap(el){ el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+
+  function renderScoreBoard(){
+    scoreFlap.textContent = pad3(score);
+    bestFlap.textContent = pad3(best);
+  }
+  function renderStrikes(){
+    strikesEl.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const d = document.createElement('div');
+      d.className = 'strike-tag' + (i < strikes ? ' lost' : '');
+      strikesEl.appendChild(d);
+    }
+  }
+
+  function currentPlaneCount(){
+    let n = 3;
+    if(score >= 4) n = 4;
+    if(score >= 9) n = 5;
+    return n;
+  }
+  function currentSpeed(){
+    return Math.min(SPEED_CAP, BASE_SPEED + score * SPEED_PER_SCORE);
+  }
+
+  function buildStaticRadarChrome(){
+    [16, 30, 44].forEach(pct=>{
+      const r = document.createElement('div');
+      r.className = 'ring';
+      r.style.width = (pct*2) + '%';
+      r.style.height = (pct*2) + '%';
+      radar.appendChild(r);
+    });
+    const h = document.createElement('div'); h.className='crosshair h'; radar.appendChild(h);
+    const v = document.createElement('div'); v.className='crosshair v'; radar.appendChild(v);
+    const zone = document.createElement('div');
+    zone.className = 'protected-zone';
+    zone.style.width = (RADIUS_MIN*2*MAX_RADIUS_PCT) + '%';
+    zone.style.height = (RADIUS_MIN*2*MAX_RADIUS_PCT) + '%';
+    radar.appendChild(zone);
+  }
+
+  function usedCallsigns(){
+    return new Set(planes.map(p=>p.callsign));
+  }
+
+  function pickCallsign(){
+    const used = usedCallsigns();
+    let callsign;
+    let attempts = 0;
+    do{
+      const code = AIRLINE_CODES[Math.floor(Math.random()*AIRLINE_CODES.length)];
+      const num = Math.floor(100 + Math.random()*900);
+      callsign = code + num;
+      attempts++;
+    } while(used.has(callsign) && attempts < 20);
+    return callsign;
+  }
+
+  const MIN_ANGLE_SEP = Math.PI / 3; // 60 degrees minimum separation
+
+  function pickAngle(){
+    if(planes.length === 0) return Math.random() * Math.PI * 2;
+    let bestAngle = Math.random() * Math.PI * 2;
+    let bestMinDist = -1;
+    for(let i=0;i<30;i++){
+      const candidate = Math.random() * Math.PI * 2;
+      let minDist = Infinity;
+      planes.forEach(p=>{
+        let diff = Math.abs(candidate - p.angle) % (Math.PI*2);
+        if(diff > Math.PI) diff = Math.PI*2 - diff;
+        if(diff < minDist) minDist = diff;
+      });
+      if(minDist >= MIN_ANGLE_SEP){ bestAngle = candidate; bestMinDist = minDist; break; }
+      if(minDist > bestMinDist){ bestMinDist = minDist; bestAngle = candidate; }
+    }
+    return bestAngle;
+  }
+
+  function spawnPlane(){
+    const id = 'p' + (planeSeq++);
+    const angle = pickAngle();
+    const radius = RADIUS_START_MIN + Math.random() * (RADIUS_START_MAX - RADIUS_START_MIN);
+    const callsign = pickCallsign();
+
+    const el = document.createElement('div');
+    el.className = 'plane';
+    el.innerHTML = '<div class="glyph">✈️</div><div class="tag">' + callsign + '</div>';
+    radar.appendChild(el);
+
+    const plane = { id, callsign, angle, radius, el };
+    el.addEventListener('pointerdown', ()=> tapPlane(plane));
+    planes.push(plane);
+    positionPlane(plane);
+    return plane;
+  }
+
+  function positionPlane(p){
+    const xPct = 50 + p.radius * MAX_RADIUS_PCT * Math.cos(p.angle);
+    const yPct = 50 + p.radius * MAX_RADIUS_PCT * Math.sin(p.angle);
+    p.el.style.left = xPct + '%';
+    p.el.style.top = yPct + '%';
+    const rot = (p.angle * 180 / Math.PI) + 225;
+    p.el.querySelector('.glyph').style.transform = 'rotate(' + rot + 'deg)';
+  }
+
+  function getClosest(){
+    if(planes.length === 0) return null;
+    return planes.reduce((a,b)=> (b.radius < a.radius ? b : a));
+  }
+
+  function renderClearanceStrip(){
+    const ordered = [...planes].sort((a,b)=>a.radius-b.radius);
+    nextFlap.textContent = ordered.length ? ordered[0].callsign : '—';
+    queueRest.innerHTML = '';
+    ordered.slice(1,3).forEach(p=>{
+      const span = document.createElement('span');
+      span.textContent = p.callsign;
+      queueRest.appendChild(span);
+    });
+    planes.forEach(p=> p.el.classList.toggle('target', ordered.length && p.id === ordered[0].id));
+  }
+
+  function ensurePlaneCount(){
+    const target = currentPlaneCount();
+    while(planes.length < target){
+      spawnPlane();
+    }
+  }
+
+  function removePlaneImmediate(plane){
+    planes = planes.filter(p=>p.id !== plane.id);
+    if(plane.el.parentNode) plane.el.parentNode.removeChild(plane.el);
+  }
+
+  function removePlaneAnimated(plane, cls){
+    plane.el.classList.add(cls);
+    planes = planes.filter(p=>p.id !== plane.id);
+    setTimeout(()=>{
+      if(plane.el.parentNode) plane.el.parentNode.removeChild(plane.el);
+    }, 300);
+  }
+
+  function tapPlane(plane){
+    if(!roundActive) return;
+    if(!planes.find(p=>p.id === plane.id)) return; // already resolved
+    const closest = getClosest();
+    if(closest && closest.id === plane.id){
+      playBlip('hit');
+      score++;
+      pulseFlap(scoreFlap);
+      renderScoreBoard();
+      removePlaneAnimated(plane, 'cleared');
+      renderClearanceStrip();
+      ensurePlaneCount();
+      renderClearanceStrip();
+    } else {
+      playBlip('miss');
+      strikes++;
+      renderStrikes();
+      plane.el.classList.add('mistap');
+      setTimeout(()=> plane.el.classList.remove('mistap'), 260);
+      if(strikes >= 3){
+        endRound('LOSS OF SEPARATION', 'Aircraft cleared out of sequence.');
+      }
+    }
+  }
+
+  function collide(plane){
+    strikes++;
+    renderStrikes();
+    removePlaneAnimated(plane, 'collided');
+    if(strikes >= 3){
+      endRound('RUNWAY INCURSION', 'A contact closed inside minimum separation.');
+      return;
+    }
+    ensurePlaneCount();
+    renderClearanceStrip();
+  }
+
+  function tick(ts){
+    if(!roundActive) return;
+    if(lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    const speed = currentSpeed();
+    const toCollide = [];
+    planes.forEach(p=>{
+      p.radius -= speed * dt;
+      if(p.radius <= RADIUS_MIN){
+        toCollide.push(p);
+      } else {
+        positionPlane(p);
+      }
+    });
+    toCollide.forEach(p=>{
+      if(planes.find(pl=>pl.id===p.id)) collide(p);
+    });
+    if(toCollide.length) renderClearanceStrip();
+
+    if(roundActive) rafId = requestAnimationFrame(tick);
+  }
+
+  function saveResult(finalScore){
+    if(finalScore > best){
+      best = finalScore;
+      localStorage.setItem(STORAGE_BEST, String(best));
+    }
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    hist.unshift(finalScore);
+    localStorage.setItem(STORAGE_HISTORY, JSON.stringify(hist.slice(0,5)));
+  }
+
+  function renderHistory(){
+    const hist = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    historyRow.innerHTML = '';
+    hist.slice(0,5).forEach(v=>{
+      const pip = document.createElement('div');
+      pip.className = 'pip';
+      pip.textContent = v;
+      historyRow.appendChild(pip);
+    });
+  }
+
+  function clearAllPlanes(){
+    planes.forEach(p=>{ if(p.el.parentNode) p.el.parentNode.removeChild(p.el); });
+    planes = [];
+  }
+
+  function endRound(title, desc){
+    roundActive = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    saveResult(score);
+    endTitleEl.textContent = title;
+    endScoreEl.textContent = pad3(score);
+    endBestEl.textContent = pad3(best);
+    newBestMsg.classList.toggle('hidden', score < best || score === 0);
+    renderScoreBoard();
+    endOverlay.classList.remove('hidden');
+  }
+
+  function startRound(){
+    score = 0;
+    strikes = 0;
+    clearAllPlanes();
+    renderScoreBoard();
+    renderStrikes();
+    startOverlay.classList.add('hidden');
+    endOverlay.classList.add('hidden');
+    ensurePlaneCount();
+    renderClearanceStrip();
+    roundActive = true;
+    lastTs = null;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  startBtn.addEventListener('click', ()=>{ unlockAudio(); startRound(); });
+  retryBtn.addEventListener('click', ()=>{ unlockAudio(); startRound(); });
+
+  buildStaticRadarChrome();
+  renderScoreBoard();
+  renderStrikes();
+  renderHistory();
+})();
+</script>
+</body>
+</html>

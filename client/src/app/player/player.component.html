@@ -1,0 +1,39 @@
+<div class="relative h-[100dvh] w-full bg-[#0A1830] overflow-hidden">
+  @if (notFound()) {
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-[#F2EFE6] px-6 text-center">
+      <p class="text-lg font-bold">Game not found.</p>
+      <button
+        (click)="goHome()"
+        class="min-h-[44px] px-5 rounded-xl bg-[#102847] border border-white/10 font-semibold"
+      >
+        Back to Hangar
+      </button>
+    </div>
+  } @else {
+    @if (loading()) {
+      <div class="absolute inset-0 flex flex-col p-4 gap-3 animate-pulse">
+        <div class="h-10 rounded-xl bg-white/10"></div>
+        <div class="flex-1 rounded-2xl bg-white/5"></div>
+      </div>
+    }
+
+    <button
+      (click)="goHome()"
+      class="absolute top-3 left-3 z-10 min-h-[44px] min-w-[44px] px-3 rounded-xl bg-[#102847]/90 border border-white/10 font-semibold text-sm backdrop-blur"
+      [style.color]="accent()"
+      aria-label="Back to game selection"
+    >
+      &larr; Hangar
+    </button>
+
+    @if (gameUrl) {
+      <iframe
+        [src]="gameUrl"
+        (load)="onFrameLoaded()"
+        class="h-full w-full border-0"
+        [class.opacity-0]="loading()"
+        title="Game frame"
+      ></iframe>
+    }
+  }
+</div>
