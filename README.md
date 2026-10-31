@@ -1,5 +1,32 @@
 # flying-games
 
+## Build and deploy
+
+The site is an Angular 17 SPA (`client/`) plus four standalone HTML games (`Games/`), deployed as a static-assets-only Cloudflare Worker (no Worker script). Configuration lives in `wrangler.jsonc`.
+
+### Build
+
+Requires Node 22.x.
+
+```
+npm run build
+```
+
+This installs the client dependencies, builds Angular into `client/dist/client/browser`, and copies `Games/` to `client/dist/client/browser/games` (lowercase, so the games are served at `/games/<file>.html`).
+
+### Run locally
+
+```
+npm run build
+npx wrangler dev
+```
+
+Unknown paths (e.g. `/play/atc-tap`) fall back to `index.html` via `not_found_handling: "single-page-application"`.
+
+### Deploy
+
+Deployment runs through Cloudflare Workers Builds, connected to this GitHub repo: build command `npm run build`, deploy command `npx wrangler deploy`, root directory `/`. Pushes to `main` deploy automatically.
+
 
 
 ## Getting started

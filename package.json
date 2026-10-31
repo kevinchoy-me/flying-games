@@ -6,10 +6,6 @@
     "node": "22.x"
   },
   "scripts": {
-    "start": "node server/index.js",
-    "heroku-postbuild": "cd client && npm install --include=dev && npm run build"
-  },
-  "dependencies": {
-    "express": "^4.19.2"
+    "build": "cd client && npm ci --include=dev && npm run build && cp -r ../Games dist/client/browser/games"
   }
 }
