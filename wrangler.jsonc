@@ -1,6 +1,11 @@
 {
   "name": "flying-games",
   "compatibility_date": "2026-10-30",
+  "routes": [
+    { "pattern": "games.kevinchoy.com", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "./client/dist/client/browser",
     "not_found_handling": "single-page-application",
